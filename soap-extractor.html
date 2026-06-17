@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOAP Extractor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f3;
+      color: #1a1a18;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container { max-width: 860px; margin: 0 auto; }
+
+    h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+    h2 { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: #1a1a18; }
+
+    .subtitle { font-size: 13px; color: #666; margin-bottom: 1.5rem; }
+
+    .section {
+      background: #fff;
+      border: 1px solid #e0e0de;
+      border-radius: 10px;
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+    }
+
+    textarea {
+      flex: 1;
+      font-family: 'Courier New', monospace;
+      font-size: 12.5px;
+      padding: 10px 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #f9f9f8;
+      resize: vertical;
+      min-height: 100px;
+      outline: none;
+      color: #1a1a18;
+    }
+    textarea:focus { border-color: #888; background: #fff; }
+
+    input[type="text"], input[type="password"] {
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #f9f9f8;
+      outline: none;
+      color: #1a1a18;
+      width: 100%;
+    }
+    input:focus { border-color: #888; background: #fff; }
+
+    button {
+      cursor: pointer;
+      font-size: 13px;
+      padding: 8px 16px;
+      border: 1px solid #bbb;
+      border-radius: 8px;
+      background: #fff;
+      color: #1a1a18;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    button:hover { background: #efefed; }
+    button:active { transform: scale(0.98); }
+
+    .btn-primary {
+      background: #1a1a18;
+      color: #fff;
+      border-color: #1a1a18;
+    }
+    .btn-primary:hover { background: #333; }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .field-count { font-size: 13px; color: #666; }
+    .toolbar-btns { display: flex; gap: 8px; }
+
+    .sig-preview {
+      background: #f9f9f8;
+      border: 1px solid #e0e0de;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 14px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      word-break: break-all;
+      color: #555;
+      line-height: 1.6;
+    }
+    .sig-preview strong {
+      display: block;
+      color: #333;
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 8px;
+    }
+
+    .field-card {
+      background: #f9f9f8;
+      border: 1px solid #e0e0de;
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .field-info { min-width: 0; flex: 1; }
+    .field-name {
+      font-size: 10.5px;
+      color: #888;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .field-val { font-size: 14px; font-weight: 500; word-break: break-all; color: #1a1a18; border: 1px solid transparent; border-radius: 4px; padding: 2px 4px; margin: -2px -4px; outline: none; }
+    .field-val:hover { border-color: #ddd; background: #fff; }
+    .field-val:focus { border-color: #888; background: #fff; }
+
+    .copy-btn { flex-shrink: 0; padding: 4px 10px; font-size: 12px; margin-top: 2px; }
+    .copy-btn.copied { background: #e8f5e9; border-color: #a5d6a7; color: #2e7d32; }
+
+    .error {
+      color: #c0392b;
+      font-size: 13px;
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: #fdecea;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .hint { font-size: 12px; color: #999; margin-top: 6px; margin-bottom: 0; }
+
+    #output { display: none; }
+
+    /* Sig generator */
+    .sig-gen-grid {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: end;
+      margin-bottom: 14px;
+    }
+
+    .input-label {
+      font-size: 11px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 5px;
+    }
+
+    .result-box {
+      background: #f0fdf4;
+      border: 1px solid #a5d6a7;
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: none;
+    }
+    .result-box .result-label {
+      font-size: 10.5px;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    .result-hash {
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1a6e2e;
+      word-break: break-all;
+      margin-bottom: 10px;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #e8e8e6;
+      margin: 1.25rem 0;
+    }
+
+    .password-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .password-row input { flex: 1; }
+
+    .show-hide {
+      padding: 8px 12px;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>SOAP Extractor</h1>
+    <p class="subtitle">Extract fields from SOAP XML and generate the SHA-256 signature — all in one place.</p>
+
+    <!-- SECTION 1: XML Parser -->
+    <div class="section">
+      <h2>1. Parse SOAP XML</h2>
+      <div class="input-row">
+        <textarea id="xmlInput" placeholder="Paste SOAP XML here... (Ctrl+Enter to parse)"></textarea>
+        <button onclick="parseXML()">Parse ↵</button>
+      </div>
+      <p class="hint">Tip: Ctrl+Enter also parses.</p>
+      <button id="copyXmlBtn" onclick="copyXML()" style="margin-top:10px; display:none;">📋 Copy XML</button>
+      <div id="error" class="error"></div>
+    </div>
+
+    <!-- SECTION 2: Extracted Fields -->
+    <div id="output">
+      <div class="section">
+        <h2>2. Extracted Fields</h2>
+        <div class="toolbar">
+          <span class="field-count" id="fieldCount"></span>
+          <div class="toolbar-btns">
+            <button onclick="copyAll()">📋 Copy all values</button>
+          </div>
+        </div>
+
+        <div class="sig-preview">
+          <strong>Concatenated values (signature input)</strong>
+          <span id="sigStr"></span>
+        </div>
+
+        <div class="field-grid" id="fieldGrid"></div>
+      </div>
+
+      <!-- SECTION 3: Signature Generator -->
+      <div class="section">
+        <h2>3. Generate SHA-256 Signature</h2>
+        <p style="font-size:13px; color:#666; margin-bottom:14px;">
+          Enter your API password — the signature is computed as <code style="background:#f0f0ee; padding:2px 6px; border-radius:4px; font-size:12px;">SHA256(concatenated_values + password)</code>
+        </p>
+
+        <div class="input-label">API Password</div>
+        <div class="password-row" style="margin-bottom:14px;">
+          <input type="password" id="apiPassword" placeholder="Enter your API password..." />
+          <button class="show-hide" onclick="togglePassword()">Show</button>
+          <button class="btn-primary" onclick="generateSignature()">Generate ⚡</button>
+        </div>
+
+        <div class="result-box" id="resultBox">
+          <div class="result-label">Generated Signature (SHA-256)</div>
+          <div class="result-hash" id="resultHash"></div>
+          <button onclick="copySig()" id="copySigBtn">Copy signature</button>
+        </div>
+
+        <div id="sigError" class="error"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const SKIP = new Set(['SIGNATURE']);
+    let parsedFields = [];
+
+    function parseXML() {
+      const raw = document.getElementById('xmlInput').value.trim();
+      const errEl = document.getElementById('error');
+      const outEl = document.getElementById('output');
+      errEl.style.display = 'none';
+      outEl.style.display = 'none';
+
+      if (!raw) { showErr('Paste some XML first.', 'error'); return; }
+
+      let doc;
+      try {
+        const parser = new DOMParser();
+        doc = parser.parseFromString(raw, 'text/xml');
+        if (doc.querySelector('parsererror')) throw new Error('Invalid XML structure');
+      } catch (e) {
+        showErr('Could not parse XML: ' + e.message, 'error');
+        return;
+      }
+
+      const fields = [];
+      doc.querySelectorAll('*').forEach(el => {
+        const name = el.localName;
+        const val = el.textContent.trim();
+        if (el.children.length === 0 && !SKIP.has(name) && val !== '') {
+          fields.push({ name, val });
+        }
+      });
+
+      if (!fields.length) {
+        showErr('No non-empty fields found (SIGNATURE excluded).', 'error');
+        return;
+      }
+
+      parsedFields = fields;
+      document.getElementById('fieldCount').textContent = fields.length + ' fields extracted';
+      document.getElementById('sigStr').textContent = fields.map(f => f.val).join('');
+
+      // reset sig result
+      document.getElementById('resultBox').style.display = 'none';
+      document.getElementById('sigError').style.display = 'none';
+
+      const grid = document.getElementById('fieldGrid');
+      grid.innerHTML = '';
+      fields.forEach((f, idx) => {
+        const card = document.createElement('div');
+        card.className = 'field-card';
+        card.dataset.idx = idx;
+        card.innerHTML = `
+          <div class="field-info">
+            <div class="field-name">${f.name}</div>
+            <div class="field-val" contenteditable="true" spellcheck="false" data-idx="${idx}">${escapeHtml(f.val)}</div>
+          </div>
+          <button class="copy-btn" data-idx="${idx}" onclick="copyFieldByIdx(${idx}, this)">Copy</button>
+        `;
+        const editEl = card.querySelector('.field-val');
+        editEl.addEventListener('input', () => {
+          const oldVal = parsedFields[idx].val;
+          const newVal = editEl.textContent;
+          parsedFields[idx].val = newVal;
+          document.getElementById('sigStr').textContent = parsedFields.map(f => f.val).join('');
+          // Update the XML in the textarea
+          const xmlArea = document.getElementById('xmlInput');
+          const tag = parsedFields[idx].name;
+          const regex = new RegExp('(<' + tag + '[^>]*>)' + escapeRegex(oldVal) + '(</' + tag + '>)', 'g');
+          xmlArea.value = xmlArea.value.replace(regex, '$1' + newVal + '$2');
+        });
+        grid.appendChild(card);
+      });
+
+      outEl.style.display = 'block';
+      document.getElementById('copyXmlBtn').style.display = 'inline-block';
+    }
+
+    async function generateSignature() {
+      const password = document.getElementById('apiPassword').value;
+      const sigErrEl = document.getElementById('sigError');
+      sigErrEl.style.display = 'none';
+
+      if (!parsedFields.length) {
+        showErr('Parse your XML first.', 'sigError'); return;
+      }
+      if (!password) {
+        showErr('Enter your API password.', 'sigError'); return;
+      }
+
+      const input = parsedFields.map(f => f.val).join('') + password;
+      const hash = await sha256(input);
+
+      document.getElementById('resultHash').textContent = hash;
+      document.getElementById('resultBox').style.display = 'block';
+    }
+
+    async function sha256(message) {
+      const msgBuffer = new TextEncoder().encode(message);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function copySig() {
+      const hash = document.getElementById('resultHash').textContent;
+      navigator.clipboard.writeText(hash).then(() => {
+        const btn = document.getElementById('copySigBtn');
+        btn.textContent = '✓ Copied!';
+        setTimeout(() => btn.textContent = 'Copy signature', 1500);
+      });
+    }
+
+    function copyFieldByIdx(idx, btn) {
+      const val = parsedFields[idx].val;
+      navigator.clipboard.writeText(val).then(() => {
+        btn.textContent = '✓ Copied';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1400);
+      });
+    }
+
+    function copyField(val, btn) {
+      navigator.clipboard.writeText(val).then(() => {
+        btn.textContent = '✓ Copied';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1400);
+      });
+    }
+
+    function copyAll() {
+      const text = parsedFields.map(f => f.val).join('');
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target.closest('button');
+        const orig = btn.textContent;
+        btn.textContent = '✓ Copied!';
+        setTimeout(() => btn.textContent = orig, 1400);
+      });
+    }
+
+    function togglePassword() {
+      const input = document.getElementById('apiPassword');
+      const btn = event.target;
+      if (input.type === 'password') { input.type = 'text'; btn.textContent = 'Hide'; }
+      else { input.type = 'password'; btn.textContent = 'Show'; }
+    }
+
+    function showErr(msg, id) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function copyXML() {
+      const xml = document.getElementById('xmlInput').value;
+      navigator.clipboard.writeText(xml).then(() => {
+        const btn = document.getElementById('copyXmlBtn');
+        btn.textContent = '✓ Copied!';
+        setTimeout(() => btn.textContent = '📋 Copy XML', 1500);
+      });
+    }
+
+    function escapeRegex(s) {
+      return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function escapeAttr(s) {
+      return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    }
+
+    document.getElementById('xmlInput').addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') parseXML();
+    });
+
+    document.getElementById('apiPassword').addEventListener('keydown', e => {
+      if (e.key === 'Enter') generateSignature();
+    });
+  </script>
+</body>
+</html>
